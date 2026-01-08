@@ -36,6 +36,13 @@ docker run -d --name neo4j-vibecoding \
 export ANTHROPIC_API_KEY="your-key"
 python examples/demo_magic_link.py    # Phase 2 demo
 python examples/demo_dfs_engine.py    # Phase 3 demo
+python examples/demo_audit.py         # Phase 4 demo
+python examples/demo_phase5.py        # Phase 5 demo
+
+# Run tests
+pytest tests/ -v                      # All tests
+pytest tests/test_integration.py -v   # Integration tests
+pytest tests/test_benchmarks.py -v    # Performance benchmarks
 ```
 
 ## Project Structure
@@ -52,12 +59,14 @@ src/
 │   ├── magic_templates.py    # Pre-built templates for common frameworks
 │   ├── codex.py              # Dependency Codex - rules and contracts
 │   └── orchestrator.py       # MultiAgentOrchestrator - pipeline coordination
-├── engine/                    # DFS Generation Engine (Phase 3)
+├── engine/                    # DFS Generation Engine (Phase 3 + 5)
 │   ├── __init__.py
 │   ├── context.py            # ContextAggregator - collects generation context
 │   ├── walker.py             # DFSWalker - recursive traversal, CycleResolver
 │   ├── backtrack.py          # BacktrackingEngine - violation recovery
-│   └── dfs_agent.py          # DFSImplementationAgent - code generation
+│   ├── dfs_agent.py          # DFSImplementationAgent - code generation
+│   ├── context_manager.py    # ContextWindowManager - intelligent compression (Phase 5)
+│   └── incremental.py        # IncrementalUpdatePipeline - minimal regeneration (Phase 5)
 ├── graph/                     # Graph Database Layer (Phase 1)
 │   ├── __init__.py
 │   ├── client.py             # Neo4j async client
@@ -67,13 +76,27 @@ src/
 │   ├── graph_nodes.py        # ProjectNode, ModuleNode, FileNode, MagicProtocolNode
 │   ├── graph_edges.py        # ImportsEdge, DependsOnEdge, InfluencedByEdge
 │   └── magic_protocol_schema.py  # JSON-LD schema for magic protocols
-└── audit/                     # Audit System (Phase 4 - TODO)
-    └── __init__.py
+└── audit/                     # Audit System (Phase 4)
+    ├── __init__.py
+    ├── analyzer.py            # CodeAnalyzer - tree-sitter AST analysis
+    ├── rules.py               # RuleEngine - executes Codex rules
+    ├── detector.py            # ViolationDetector - combines analyzer + rules
+    ├── reporter.py            # ReportGenerator - TEXT, JSON, MD, SARIF
+    ├── fixer.py               # AutoFixSuggester - generates patches
+    └── agent.py               # AuditAgent - orchestrates pipeline
 
 examples/
 ├── demo_architect.py          # Phase 1 demo (architecture generation)
 ├── demo_magic_link.py         # Phase 2 demo (magic dependency detection)
-└── demo_dfs_engine.py         # Phase 3 demo (DFS generation)
+├── demo_dfs_engine.py         # Phase 3 demo (DFS generation)
+├── demo_audit.py              # Phase 4 demo (audit system)
+└── demo_phase5.py             # Phase 5 demo (integration & optimization)
+
+tests/
+├── __init__.py
+├── conftest.py                # Shared fixtures
+├── test_integration.py        # End-to-end integration tests (24 tests)
+└── test_benchmarks.py         # Performance benchmark suite
 ```
 
 ## Implementation Status
@@ -107,18 +130,20 @@ examples/
 - [x] DFSImplementationAgent - generates code with full context
 - [x] CycleResolver - detects and suggests fixes for circular deps
 
-### Phase 4: Audit System [TODO]
-- [ ] Codex Loader
-- [ ] Rule Engine
-- [ ] Code Analyzer (tree-sitter integration)
-- [ ] Violation Detector & Reporter
-- [ ] Auto-Fix Suggester
+### Phase 4: Audit System [COMPLETE]
+- [x] CodeAnalyzer - tree-sitter based AST analysis
+- [x] RuleEngine - executes Codex rules with built-in matchers
+- [x] ViolationDetector - combines analyzer and rules
+- [x] ReportGenerator - TEXT, JSON, Markdown, SARIF formats
+- [x] AutoFixSuggester - generates patches and fix suggestions
+- [x] AuditAgent - orchestrates the complete audit pipeline
 
-### Phase 5: Integration & Optimization [TODO]
-- [ ] End-to-end testing
-- [ ] Performance benchmarks
-- [ ] Context compression optimization
-- [ ] Incremental update support
+### Phase 5: Integration & Optimization [COMPLETE]
+- [x] End-to-end integration tests (24 tests passing)
+- [x] Performance benchmark suite
+- [x] ContextWindowManager - intelligent context compression
+- [x] IncrementalUpdatePipeline - minimal regeneration with change detection
+- [x] LazyMagicValidator - boundary-based protocol validation
 
 ## Key Concepts
 
@@ -151,6 +176,28 @@ def dfs_generate(node_id, context):
 
 ## Memory & Decision Log
 
+### 2026-01-08
+- Completed Phase 5: Integration & Optimization
+  - ContextWindowManager: Intelligent context compression with category-based budgets
+    - Magic protocols: Never compressed (essential)
+    - Ancestors: Summarized to key points
+    - Siblings: Interface signatures only
+    - Generated code: Filtered by relevance score
+  - IncrementalUpdatePipeline: Minimal regeneration
+    - ChangeDetector: Hash-based file change tracking
+    - ImpactAnalyzer: Graph queries for downstream dependencies
+    - SelectiveRegenerator: Only regenerates affected subgraph
+    - LazyMagicValidator: Validates only at module boundaries
+  - Test suite: 24 integration tests, performance benchmarks
+  - Demo: examples/demo_phase5.py showcases all components
+
+- Completed Phase 4: Magic Dependency Audit System
+  - CodeAnalyzer uses tree-sitter for Python AST analysis
+  - RuleEngine has built-in matchers: ENV, AUTH, DB, LIFECYCLE, SIDE_EFFECT, GLOBAL
+  - ReportGenerator supports SARIF format for GitHub/Azure DevOps integration
+  - AutoFixSuggester generates CodePatch objects with confidence scores
+  - AuditAgent integrates with LangGraph workflow
+
 ### 2026-01-07
 - Initialized project with Phase 0
 - Completed Phase 1: Graph data model with Neo4j
@@ -167,9 +214,12 @@ def dfs_generate(node_id, context):
 4. **Async throughout**: Non-blocking I/O for LLM calls and DB
 
 ## Next Steps
-1. **Phase 4**: Implement audit system with tree-sitter for code analysis
-2. **Phase 5**: End-to-end testing with real project generation
-3. **Enhancement**: Add LogicalDesignerAgent for file-level design
+**All 5 phases complete!** Potential enhancements:
+1. **LogicalDesignerAgent**: File-level design agent for module internals
+2. **CI/CD Integration**: GitHub Actions with SARIF report uploads
+3. **Real Project Generation**: Test with actual FastAPI e-commerce demo
+4. **Parallel Subtree Generation**: Multi-core acceleration for independent subtrees
+5. **Embedding-based Relevance**: Use embeddings for smarter context selection
 
 ---
 *Reference: root/polymorphic-dazzling-meadow.md*
